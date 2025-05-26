@@ -14,18 +14,18 @@ def jaffle_api_source():
       for page in client.paginate("customers", params={"page_size": 500}):
           yield page
   
-  @dlt.resource(parallelized = True)
+  @dlt.resource(parallelized = False)
   def orders():
-      for page in client.paginate("orders"):
+      for page in client.paginate("orders", params={"page_size": 10}):
           yield page
           
-  @dlt.resource(parallelized = True)
+  @dlt.resource(parallelized = False)
   def products():
-      for page in client.paginate("products"):
+      for page in client.paginate("products", params={"page_size": 10}):
           yield page
 
 
-  return customers#, orders, products
+  return customers, products #, orders # Skip orders for now for simplicity, since deployment is the focus.
 
 # Configure the pipeline with destination and namespace/schema names in duckdb.
 pipeline = dlt.pipeline(
@@ -35,19 +35,7 @@ pipeline = dlt.pipeline(
 )
 
 # Run the extract.
-extr_info = pipeline.extract(jaffle_api_source())
+run_info = pipeline.run(jaffle_api_source())
 
-# Pretty print information after extraction.
-print(extr_info.last_trace)
-
-# Run the normalization.
-norm_info = pipeline.normalize()
-
-# Pretty print information after normalization.
-print(norm_info.last_trace)
-
-# Run the load.
-load_info = pipeline.load()
-
-# Pretty print information after loading.
-print(load_info.load_trace)
+# Print row counts of all tables in the destination as a dataframe.
+print(pipeline.dataset().row_counts().df())
